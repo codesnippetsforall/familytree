@@ -1,0 +1,59 @@
+/* Family Tree Admin - Shared styles */
+:root {
+    --ft-primary: #2563eb;
+    --ft-primary-hover: #1d4ed8;
+    --ft-sidebar-bg: #f8fafc;
+    --ft-sidebar-active: #eff6ff;
+    --ft-card-radius: 12px;
+    --ft-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+}
+
+body { font-family: 'Segoe UI', system-ui, sans-serif; }
+
+/* Sidebar */
+.sidebar {
+    min-height: 100vh;
+    box-shadow: 2px 0 8px rgba(0,0,0,0.06);
+}
+.sidebar .nav-link {
+    border-radius: 8px;
+    margin: 2px 8px;
+    color: #475569;
+    font-weight: 500;
+}
+.sidebar .nav-link:hover {
+    background: var(--ft-sidebar-active);
+    color: var(--ft-primary);
+}
+.sidebar .nav-link.active {
+    background: var(--ft-sidebar-active);
+    color: var(--ft-primary);
+}
+.sidebar .nav-link i { font-size: 1.25rem; margin-right: 0.5rem; }
+
+/* Cards */
+.card {
+    border-radius: var(--ft-card-radius);
+    box-shadow: var(--ft-shadow);
+    border: none;
+}
+.card-header {
+    font-weight: 600;
+    border-radius: var(--ft-card-radius) var(--ft-card-radius) 0 0;
+}
+
+/* Buttons */
+.btn-primary {
+    background: var(--ft-primary);
+    border-color: var(--ft-primary);
+}
+.btn-primary:hover {
+    background: var(--ft-primary-hover);
+    border-color: var(--ft-primary-hover);
+}
+
+/* Form controls focus */
+.form-control:focus, .form-select:focus {
+    border-color: var(--ft-primary);
+    box-shadow: 0 0 0 0.2rem rgba(37, 99, 235, 0.2);
+}
