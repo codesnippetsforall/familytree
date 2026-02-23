@@ -43,6 +43,88 @@ foreach ($ageGroupOrder as $group) {
 // Countries distribution
 $stmt = $db->query("SELECT country, COUNT(*) as count FROM family_members GROUP BY country");
 $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Data quality metrics
+$stmt = $db->query("
+    SELECT
+        SUM(CASE WHEN date_of_birth IS NULL OR date_of_birth = '0000-00-00' THEN 1 ELSE 0 END) AS missing_dob,
+        SUM(CASE WHEN picture IS NULL OR TRIM(picture) = '' THEN 1 ELSE 0 END) AS missing_photo
+    FROM family_members
+");
+$dq = $stmt->fetch(PDO::FETCH_ASSOC);
+
+$stmt = $db->query("
+    SELECT COUNT(*) AS cnt
+    FROM family_members fm
+    WHERE NOT EXISTS (
+        SELECT 1 FROM member_parents mp WHERE mp.member_id = fm.id
+    )
+");
+$missingParents = (int)$stmt->fetch(PDO::FETCH_ASSOC)['cnt'];
+
+$stmt = $db->query("
+    SELECT COUNT(*) AS cnt
+    FROM family_members fm
+    WHERE NOT EXISTS (
+        SELECT 1 FROM member_spouses ms WHERE ms.member_id = fm.id
+    )
+");
+$missingSpouses = (int)$stmt->fetch(PDO::FETCH_ASSOC)['cnt'];
+
+$dataQuality = [
+    ['label' => 'Missing DOB', 'count' => (int)($dq['missing_dob'] ?? 0)],
+    ['label' => 'Missing Photo', 'count' => (int)($dq['missing_photo'] ?? 0)],
+    ['label' => 'Missing Parents', 'count' => $missingParents],
+    ['label' => 'Missing Spouse', 'count' => $missingSpouses],
+];
+
+// Relationship coverage - parents
+$stmt = $db->query("
+    SELECT
+        CASE
+            WHEN COALESCE(pc.parent_count, 0) = 0 THEN '0 Parents'
+            WHEN COALESCE(pc.parent_count, 0) = 1 THEN '1 Parent'
+            ELSE '2+ Parents'
+        END AS parent_group,
+        COUNT(*) AS count
+    FROM family_members fm
+    LEFT JOIN (
+        SELECT member_id, COUNT(*) AS parent_count
+        FROM member_parents
+        GROUP BY member_id
+    ) pc ON fm.id = pc.member_id
+    GROUP BY parent_group
+");
+$parentCoverageRaw = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$parentCoverageMap = array_column($parentCoverageRaw, 'count', 'parent_group');
+$parentCoverage = [
+    ['group' => '0 Parents', 'count' => (int)($parentCoverageMap['0 Parents'] ?? 0)],
+    ['group' => '1 Parent', 'count' => (int)($parentCoverageMap['1 Parent'] ?? 0)],
+    ['group' => '2+ Parents', 'count' => (int)($parentCoverageMap['2+ Parents'] ?? 0)],
+];
+
+// Relationship coverage - spouse
+$stmt = $db->query("
+    SELECT
+        CASE
+            WHEN COALESCE(sc.spouse_count, 0) = 0 THEN 'No Spouse'
+            ELSE 'Has Spouse'
+        END AS spouse_group,
+        COUNT(*) AS count
+    FROM family_members fm
+    LEFT JOIN (
+        SELECT member_id, COUNT(*) AS spouse_count
+        FROM member_spouses
+        GROUP BY member_id
+    ) sc ON fm.id = sc.member_id
+    GROUP BY spouse_group
+");
+$spouseCoverageRaw = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$spouseCoverageMap = array_column($spouseCoverageRaw, 'count', 'spouse_group');
+$spouseCoverage = [
+    ['group' => 'Has Spouse', 'count' => (int)($spouseCoverageMap['Has Spouse'] ?? 0)],
+    ['group' => 'No Spouse', 'count' => (int)($spouseCoverageMap['No Spouse'] ?? 0)],
+];
 ?>
 
 <!DOCTYPE html>
@@ -158,6 +240,44 @@ $countries = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <div class="card-body">
                             <div class="chart-container">
                                 <canvas id="countryChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- New Analytics Row -->
+            <div class="row g-3 mt-1">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">Data Quality</div>
+                        <div class="card-body">
+                            <div class="chart-container">
+                                <canvas id="dataQualityChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">Relationship Coverage (Parents)</div>
+                        <div class="card-body">
+                            <div class="chart-container">
+                                <canvas id="parentCoverageChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-3 mt-1 mb-3">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">Relationship Coverage (Spouse)</div>
+                        <div class="card-body">
+                            <div class="chart-container">
+                                <canvas id="spouseCoverageChart"></canvas>
                             </div>
                         </div>
                     </div>
@@ -292,6 +412,93 @@ const countryChart = new Chart(document.getElementById('countryChart'), {
             if (elements.length > 0) {
                 const index = elements[0].index;
                 handleChartClick('country', countryData[index].country);
+            }
+        }
+    }
+});
+
+// Data Quality Chart
+const dataQualityData = <?php echo json_encode($dataQuality); ?>;
+const dqColors = ['#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
+const dataQualityChart = new Chart(document.getElementById('dataQualityChart'), {
+    type: 'bar',
+    data: {
+        labels: dataQualityData.map(item => item.label),
+        datasets: [{
+            data: dataQualityData.map(item => item.count),
+            backgroundColor: dataQualityData.map((_, i) => dqColors[i % dqColors.length]),
+            borderRadius: 5
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
+        onClick: (event, elements) => {
+            if (elements.length > 0) {
+                const index = elements[0].index;
+                const keyMap = {
+                    'Missing DOB': 'missing_dob',
+                    'Missing Photo': 'missing_photo',
+                    'Missing Parents': 'missing_parents',
+                    'Missing Spouse': 'missing_spouse'
+                };
+                const selected = dataQualityData[index].label;
+                handleChartClick('quality_filter', keyMap[selected] || selected);
+            }
+        }
+    }
+});
+
+// Parent Coverage Chart
+const parentCoverageData = <?php echo json_encode($parentCoverage); ?>;
+const parentCoverageChart = new Chart(document.getElementById('parentCoverageChart'), {
+    type: 'bar',
+    data: {
+        labels: parentCoverageData.map(item => item.group),
+        datasets: [{
+            data: parentCoverageData.map(item => item.count),
+            backgroundColor: ['#94a3b8', '#3b82f6', '#10b981'],
+            borderRadius: 5
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
+        onClick: (event, elements) => {
+            if (elements.length > 0) {
+                const index = elements[0].index;
+                handleChartClick('parent_coverage', parentCoverageData[index].group);
+            }
+        }
+    }
+});
+
+// Spouse Coverage Chart
+const spouseCoverageData = <?php echo json_encode($spouseCoverage); ?>;
+const spouseCoverageChart = new Chart(document.getElementById('spouseCoverageChart'), {
+    type: 'doughnut',
+    data: {
+        labels: spouseCoverageData.map(item => item.group),
+        datasets: [{
+            data: spouseCoverageData.map(item => item.count),
+            backgroundColor: ['#14b8a6', '#cbd5e1'],
+            borderWidth: 1,
+            borderColor: '#fff'
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: true, position: 'bottom' } },
+        cutout: '60%',
+        onClick: (event, elements) => {
+            if (elements.length > 0) {
+                const index = elements[0].index;
+                handleChartClick('spouse_coverage', spouseCoverageData[index].group);
             }
         }
     }

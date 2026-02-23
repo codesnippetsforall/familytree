@@ -63,6 +63,45 @@ if (isset($_GET['filter_type']) && isset($_GET['filter_value'])) {
             $where_conditions[] = "m.country = ?";
             $params[] = $_GET['filter_value'];
             break;
+        case 'quality_filter':
+            switch ($_GET['filter_value']) {
+                case 'missing_dob':
+                    $where_conditions[] = "(m.date_of_birth IS NULL OR m.date_of_birth = '0000-00-00')";
+                    break;
+                case 'missing_photo':
+                    $where_conditions[] = "(m.picture IS NULL OR TRIM(m.picture) = '')";
+                    break;
+                case 'missing_parents':
+                    $where_conditions[] = "NOT EXISTS (SELECT 1 FROM member_parents mp2 WHERE mp2.member_id = m.id)";
+                    break;
+                case 'missing_spouse':
+                    $where_conditions[] = "NOT EXISTS (SELECT 1 FROM member_spouses ms2 WHERE ms2.member_id = m.id)";
+                    break;
+            }
+            break;
+        case 'parent_coverage':
+            switch ($_GET['filter_value']) {
+                case '0 Parents':
+                    $where_conditions[] = "(SELECT COUNT(*) FROM member_parents mp2 WHERE mp2.member_id = m.id) = 0";
+                    break;
+                case '1 Parent':
+                    $where_conditions[] = "(SELECT COUNT(*) FROM member_parents mp2 WHERE mp2.member_id = m.id) = 1";
+                    break;
+                case '2+ Parents':
+                    $where_conditions[] = "(SELECT COUNT(*) FROM member_parents mp2 WHERE mp2.member_id = m.id) >= 2";
+                    break;
+            }
+            break;
+        case 'spouse_coverage':
+            switch ($_GET['filter_value']) {
+                case 'Has Spouse':
+                    $where_conditions[] = "EXISTS (SELECT 1 FROM member_spouses ms2 WHERE ms2.member_id = m.id)";
+                    break;
+                case 'No Spouse':
+                    $where_conditions[] = "NOT EXISTS (SELECT 1 FROM member_spouses ms2 WHERE ms2.member_id = m.id)";
+                    break;
+            }
+            break;
     }
 }
 

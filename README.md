@@ -8,6 +8,25 @@ This project helps families digitally manage member profiles and relationships (
 
 ---
 
+## Screenshots
+
+> Screenshots are stored in the `reference/` folder.  
+> If your file names are different, just update the 3 paths below.
+
+### 1) Dashboard Overview
+
+![Dashboard Overview](reference/dashboard-overview.png)
+
+### 2) Family Members / Tree Management
+
+![Family Members and Tree](reference/family-members-tree.png)
+
+### 3) Find Relationship Feature
+
+![Find Relationship](reference/find-relationship.png)
+
+---
+
 ## Core Features
 
 ### 1) Admin Authentication
@@ -118,6 +137,10 @@ familytree/
 │  └─ includes/sidebar.php
 ├─ config/
 │  └─ database.php
+├─ reference/
+│  ├─ dashboard-overview.png
+│  ├─ family-members-tree.png
+│  └─ find-relationship.png
 ├─ sql/
 │  ├─ add_admin_suggestions_table.sql
 │  └─ add_countries_states_tables.sql
