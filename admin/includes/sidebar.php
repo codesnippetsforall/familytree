@@ -27,6 +27,11 @@
                 </a>
             </li>
             <li class="nav-item">
+                <a class="nav-link <?php echo basename($_SERVER['PHP_SELF']) == 'relationship_finder.php' ? 'active' : ''; ?>" href="relationship_finder.php">
+                    <i class='bx bx-git-compare'></i> Find Relationship
+                </a>
+            </li>
+            <li class="nav-item">
                 <a class="nav-link" href="logout.php">
                     <i class='bx bxs-log-out'></i> Logout
                 </a>
