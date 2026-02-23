@@ -15,15 +15,15 @@ This project helps families digitally manage member profiles and relationships (
 
 ### 1) Dashboard Overview
 
-![Dashboard Overview](reference/dashboard-overview.png)
+![Dashboard Overview](reference/dashboard.jpg)
 
 ### 2) Family Members / Tree Management
 
-![Family Members and Tree](reference/family-members-tree.png)
+![Family Members and Tree](reference/family-members.jpg)
 
 ### 3) Find Relationship Feature
 
-![Find Relationship](reference/find-relationship.png)
+![Find Relationship](reference/relationship-finder.jpg)
 
 ---
 
